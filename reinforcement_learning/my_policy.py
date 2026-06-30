@@ -26,8 +26,18 @@ class ActorCritic(nn.Module):
         self.policy_head = nn.Linear(hidden_size, n_actions)
         self.value_head = nn.Linear(hidden_size, 1)
 
-        if checkpoint_path is not None and os.path.exists(checkpoint_path):
-            ckpt = torch.load(checkpoint_path, weights_only=False, map_location="cpu")
+        # --- PATH SAFETY FALLBACK ---
+        # If the hardcoded relative path doesn't exist on the evaluator, 
+        # look for the checkpoint in the exact same directory as this Python file.
+        safe_ckpt_path = checkpoint_path
+        if safe_ckpt_path is not None and not os.path.exists(safe_ckpt_path):
+            fallback_path = os.path.join(os.path.dirname(__file__), "checkpoint.pt")
+            if os.path.exists(fallback_path):
+                safe_ckpt_path = fallback_path
+        # -----------------------------
+
+        if safe_ckpt_path is not None and os.path.exists(safe_ckpt_path):
+            ckpt = torch.load(safe_ckpt_path, weights_only=False, map_location="cpu")
             self.load_state_dict(ckpt["model"])
             self.eval()
         else:
